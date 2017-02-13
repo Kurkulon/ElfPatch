@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="ElfPatch"
+	ProjectGUID="{F4594267-6C60-4E95-B50F-7089CC43CE28}"
+	RootNamespace="ElfPatch"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="wmake -h version=Debug"
+				ReBuildCommandLine="wmake -h -a version=Debug"
+				CleanCommandLine="@del /Q .\Debug\*.*"
+				Output="$(OutDir)\ElfPatch.exe"
+				PreprocessorDefinitions="_DEBUG,__softfp="
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="0"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="wmake -h version=Release"
+				ReBuildCommandLine="wmake -h -a version=Release"
+				CleanCommandLine="@del /Q .\Release\*.*"
+				Output="$(OutDir)\ElfPatch.exe"
+				PreprocessorDefinitions="__softfp="
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
+			>
+			<File
+				RelativePath=".\cpp\ElfPatch.cpp"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
+			>
+			<File
+				RelativePath=".\cpp\token.h"
+				>
+			</File>
+			<File
+				RelativePath=".\cpp\types.h"
+				>
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\cpp\lex.l"
+			>
+		</File>
+		<File
+			RelativePath=".\makeobj"
+			>
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
