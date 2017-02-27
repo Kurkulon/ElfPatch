@@ -74,6 +74,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\cpp\elf.h"
+				>
+			</File>
+			<File
 				RelativePath=".\cpp\token.h"
 				>
 			</File>
