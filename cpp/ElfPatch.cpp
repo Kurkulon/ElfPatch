@@ -19,6 +19,8 @@
 extern "C" const Token* GetToken();
 extern "C" int SetScanBuffer(char *base, int size);
 
+static bool	bigEndian = false;
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 inline word ReverseWord(word v) { return ((v&0x00FF)<<8 | (v&0xFF00)>>8); }
@@ -33,21 +35,43 @@ inline dword ReverseDword(dword v)
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-static void ReverseFileHeader(Elf32_Ehdr *h)
+static void InitFileHeader(Elf32_Ehdr *h)
 {
-    h->e_type		= ReverseWord	(h->e_type		);		
-    h->e_machine	= ReverseWord	(h->e_machine	);
-    h->e_version	= ReverseDword	(h->e_version	);
-    h->e_entry		= ReverseDword	(h->e_entry		);
-    h->e_phoff		= ReverseDword	(h->e_phoff		);	
-    h->e_shoff		= ReverseDword	(h->e_shoff		);
-    h->e_flags		= ReverseDword	(h->e_flags		);
-    h->e_ehsize		= ReverseWord	(h->e_ehsize	);
-    h->e_phentsize	= ReverseWord	(h->e_phentsize	);	
-    h->e_phnum		= ReverseWord	(h->e_phnum		);
-    h->e_shentsize	= ReverseWord	(h->e_shentsize	);
-    h->e_shnum		= ReverseWord	(h->e_shnum		);
-    h->e_shstrndx	= ReverseWord	(h->e_shstrndx	);
+	if (bigEndian)
+	{
+		h->e_type		= ReverseWord	(h->e_type		);		
+		h->e_machine	= ReverseWord	(h->e_machine	);
+		h->e_version	= ReverseDword	(h->e_version	);
+		h->e_entry		= ReverseDword	(h->e_entry		);
+		h->e_phoff		= ReverseDword	(h->e_phoff		);	
+		h->e_shoff		= ReverseDword	(h->e_shoff		);
+		h->e_flags		= ReverseDword	(h->e_flags		);
+		h->e_ehsize		= ReverseWord	(h->e_ehsize	);
+		h->e_phentsize	= ReverseWord	(h->e_phentsize	);	
+		h->e_phnum		= ReverseWord	(h->e_phnum		);
+		h->e_shentsize	= ReverseWord	(h->e_shentsize	);
+		h->e_shnum		= ReverseWord	(h->e_shnum		);
+		h->e_shstrndx	= ReverseWord	(h->e_shstrndx	);
+	};
+}
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+static void InitSectionHeader(Elf32_Shdr *h)
+{
+	if (bigEndian)
+	{
+		h->sh_name		= ReverseDword	(h->sh_name			);		
+		h->sh_type		= ReverseDword	(h->sh_type			);
+		h->sh_flags		= ReverseDword	(h->sh_flags		);
+		h->sh_addr		= ReverseDword	(h->sh_addr			);
+		h->sh_offset	= ReverseDword	(h->sh_offset		);	
+		h->sh_size		= ReverseDword	(h->sh_size			);
+		h->sh_link		= ReverseDword	(h->sh_link			);
+		h->sh_info		= ReverseDword	(h->sh_info			);
+		h->sh_addralign	= ReverseDword	(h->sh_addralign	);	
+		h->sh_entsize	= ReverseDword	(h->sh_entsize		);
+	};
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -87,6 +111,8 @@ static FILE* 		dstfile = 0;
 static FILE* 		elfFile = 0;
 static u32			elfSize = 0;
 static const byte*	elfData = 0;
+static Elf32_Ehdr	*ehdr = 0;
+static Elf32_Shdr	*shdr = 0;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -139,54 +165,62 @@ static bool OpenELF(const char *filename)
 		return false;
 	};
 
-	Elf32_Ehdr *hdr = (Elf32_Ehdr*)elfData;
+	ehdr = (Elf32_Ehdr*)elfData;
 
-	if (hdr->e_ident[EI_MAG0] != ELFMAG0 || hdr->e_ident[EI_MAG1] != ELFMAG1 || hdr->e_ident[EI_MAG2] != ELFMAG2 || hdr->e_ident[EI_MAG3] != ELFMAG3)
+	if (ehdr->e_ident[EI_MAG0] != ELFMAG0 || ehdr->e_ident[EI_MAG1] != ELFMAG1 || ehdr->e_ident[EI_MAG2] != ELFMAG2 || ehdr->e_ident[EI_MAG3] != ELFMAG3)
 	{
 		return false;
 	};
 
-	if (hdr->e_ident[EI_CLASS] != ELFCLASS32 && hdr->e_ident[EI_CLASS] != ELFCLASS64)
+	if (ehdr->e_ident[EI_CLASS] != ELFCLASS32 && ehdr->e_ident[EI_CLASS] != ELFCLASS64)
 	{
 		return false;
 	};
 
-	printf("Class:      %s\n", class_table[hdr->e_ident[EI_CLASS] - ELFCLASS32].str);
+	printf("Class:      %s\n", class_table[ehdr->e_ident[EI_CLASS] - ELFCLASS32].str);
 
-	if (hdr->e_ident[EI_DATA] > ELFDATA2MSB)
+	if (ehdr->e_ident[EI_DATA] > ELFDATA2MSB)
 	{
 		return false;
 	};
 
-	printf("Encoding:   %s\n", endian_table[hdr->e_ident[EI_DATA]].str);
+	printf("Encoding:   %s\n", endian_table[ehdr->e_ident[EI_DATA]].str);
 
-	if (hdr->e_ident[EI_DATA] == ELFDATA2MSB)
-	{
-		ReverseFileHeader(hdr);
-	};
+	bigEndian = (ehdr->e_ident[EI_DATA] == ELFDATA2MSB);
 
-	if (hdr->e_ident[EI_VERSION] > EV_CURRENT)
+	InitFileHeader(ehdr);
+
+	if (ehdr->e_ident[EI_VERSION] > EV_CURRENT)
 	{
 		return false;
 	};
 
-	printf("ELFVersion: %s\n", version_table[hdr->e_ident[EI_VERSION]].str);
+	printf("ELFVersion: %s\n", version_table[ehdr->e_ident[EI_VERSION]].str);
 	
-	if (hdr->e_type > ET_CORE)
+	if (ehdr->e_type > ET_CORE)
 	{
 		return false;
 	};
 
-	printf("Type:       %s\n", type_table[hdr->e_type].str);
+	printf("Type:       %s\n", type_table[ehdr->e_type].str);
 
 
-	if (hdr->e_machine > EM_BPF)
+	if (ehdr->e_machine > EM_BPF)
 	{
 		return false;
 	};
 
-	printf("Machine:    %s\n", machine_table[hdr->e_machine].str);
+	printf("Machine:    %s\n", machine_table[ehdr->e_machine].str);
 	
+
+	shdr = (Elf32_Shdr*)(elfData+ehdr->e_shoff);
+
+	if (shdr == 0 || ehdr->e_shnum == 0 || ehdr->e_shentsize < sizeof(Elf32_Shdr))
+	{
+		printf("ERROR: ELF file %s has no section header table. Exiting.\n", filename);
+
+		return false;
+	};
 
 
 	return true;
@@ -254,205 +288,59 @@ int main(int argc, const char* argv[])
 		return 1;
 	};
 
-	u32 value;
+//	u32 value;
 
-	u32 t, t2, t3;
+	u32 t;
 
-	byte state = 0;
+	//byte state = 0;
 
-	bool run = true;
+	//bool run = true;
 
-	bool assign = true;
+	//bool assign = true;
 
-	while (run)
+	u32 count = ehdr->e_shnum;
+
+	byte *p = (byte*)shdr;
+
+	while (count > 0)
 	{
-		switch (state)
+		InitSectionHeader(shdr);
+
+		if (shdr->sh_type == SHT_PROGBITS)
 		{
-			case 0: // num
+			printf("Patch section: address 0x%08lX; size 0x%08lX\n", shdr->sh_addr, shdr->sh_size);
 
-				token = GetToken();
+			if ((shdr->sh_addr+shdr->sh_size) > fileSize)
+			{
+				printf("Error: address too big; patching failed\n", token->str);
 
-			case 1: 
+				return 3;
+			};
 
-				if (token->id == FILENAME || token->id == STR)
-				{
-					state = 4;
+			fseek(dstfile, shdr->sh_addr, SEEK_SET);
 
-					break;
-				}
-				else if (token->id != NUM)
-				{
-					printf("Error processing number %s; patching failed\n", token->str);
+			t = fwrite(elfData+shdr->sh_offset, 1, shdr->sh_size, dstfile);
 
-					return 3;
-				};
-
-			case 2: 
-
-				value = strtoul(token->str, 0, 0);
-
-				token = GetToken();
-
-				if (token->id == ASSIGN)
-				{
-					if (!assign)
-					{
-						printf("Error: assign not allowed here\n", token->str);
-						return 3;
-					}
-					else if (value >= fileSize)
-					{
-						printf("Error: address too big; patching failed\n", token->str);
-						return 3;
-					}
-					else
-					{
-						adr = value;
-
-						assign = false;
-
-						printf("\nPatch address 0x%X:\n", adr);
-
-						//token = GetToken();
-
-						//state = (token->id == FILENAME || token->id == STR) ? 4 : 1;
-
-						state = 0;
-
-						break;
-					};
-				};
-
-			case 3: // write byte
-
-				if (adr >= fileSize)
-				{
-					printf("Patch exceeds file size. Exiting.\n");
-					return 3;
-				};
-
-				if (value > 0xFF)
-				{
-					printf("Patch value 0x%X exceeds 0xFF. Exiting.\n", value);
-					return 3;
-				};
-
-				fseek(dstfile, adr++, SEEK_SET);
-				t = fwrite(&value, 1, 1, dstfile);
-
-				if (t != 1)
-				{
-					printf("Error writing file; patching failed\n", token->str);
-					return 3;
-				};
-
-				printf("0x%02X ", value);
-
-				assign = true;
-
-//				token = GetToken();
-
-				if (token->id == COMMA)
-				{
-					token = GetToken();
-				};
-
-				run = (token->id != 0);
-
-				state = 1;
-
-				break;
-
-			case 4: //write dstfile
-
-				srcfile = fopen(token->str, "rb");
-
-				if (!srcfile)
-				{
-					printf("Unable to open file %s. Exiting.\n", token->str);
-					return 3;
-				};
-
-
-				fseek(srcfile, 0L, SEEK_END);
-				srcfileSize = ftell(srcfile);
-
-				printf("File %s, size %u - ", token->str, srcfileSize);
-
-				if (srcfileSize == 0)
-				{
-					printf("Warring: Patch size file %s is 0.\n", token->str);
-				};
-
-				if ((adr+srcfileSize) >= fileSize)
-				{
-					printf("Patch size file %s too big. Exiting.\n", token->str);
-					return 3;
-				};
-
-				fseek(srcfile, 0, SEEK_SET);
-				fseek(dstfile, adr, SEEK_SET);
-
-				t3 = srcfileSize;
-
-				while(t3 > 0)
-				{
-					t = fread(srcbuf, 1, sizeof(srcbuf), srcfile);
-
-					t3 -= t;
-
-					t2 = fwrite(srcbuf, 1, t, dstfile);
-
-					if (t2 != t)
-					{
-						printf("Error writing file; patching failed\n", token->str);
-						return 3;
-					};
-
-				};
-
-				printf("writing %u bytes\n", srcfileSize);
-
-				adr += srcfileSize;
-
-				printf("Patch address 0x%X:\n", adr);
-
-				assign = true;
-
-				token = GetToken();
-
-				if (token->id == COMMA)
-				{
-					token = GetToken();
-				};
-
-				run = (token->id != 0);
-
-				state = 1;
-
-				break;
+			if (t != shdr->sh_size)
+			{
+				printf("Error writing file; patching failed\n");
+				return 3;
+			};
 		};
+
+		count--;
+
+		p += ehdr->e_shentsize;
+
+		shdr = (Elf32_Shdr*)p;
 	};
-  
-  //for (vector<Patch>::const_iterator it = entries.begin(); it != entries.end(); ++it)
-  //{
-  //  const Patch& patch = *it;
-  //  
-  //  if (patch.address + patch.values.size() >= fileSize)
-  //  {
-  //    printf("Patch exceeds dstfile size. Exiting.\n");
-  //    break;
-  //  }
-  //  
-  //  fseek(dstfile, patch.address, SEEK_SET);
-  //  fwrite(&patch.values[0], 1, patch.values.size(), dstfile);
-  //}
-  
-  fclose(dstfile);
 
-	printf("\nPatching done\n", token->str);
+	fclose(dstfile);
+	fclose(elfFile);
 
-  return 0;
+	printf("\nPatching OK\n");
+
+	return 0;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
