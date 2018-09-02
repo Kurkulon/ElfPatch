@@ -308,23 +308,27 @@ int main(int argc, const char* argv[])
 
 		if (shdr->sh_type == SHT_PROGBITS)
 		{
-			printf("Patch section: address 0x%08lX; size 0x%08lX\n", shdr->sh_addr, shdr->sh_size);
+			printf("Patch section: address 0x%08lX; size 0x%08lX", shdr->sh_addr, shdr->sh_size);
 
 			if ((shdr->sh_addr+shdr->sh_size) > fileSize)
 			{
-				printf("Error: address too big; patching failed\n", token->str);
-
-				return 3;
-			};
-
-			fseek(dstfile, shdr->sh_addr, SEEK_SET);
-
-			t = fwrite(elfData+shdr->sh_offset, 1, shdr->sh_size, dstfile);
-
-			if (t != shdr->sh_size)
+				printf("\tWarring: address too big; patching ignored\n", token->str);
+			}
+			else
 			{
-				printf("Error writing file; patching failed\n");
-				return 3;
+				fseek(dstfile, shdr->sh_addr, SEEK_SET);
+
+				t = fwrite(elfData+shdr->sh_offset, 1, shdr->sh_size, dstfile);
+
+				if (t != shdr->sh_size)
+				{
+					printf("\tError writing file; patching failed\n");
+					return 3;
+				}
+				else
+				{
+					printf("\n");
+				};
 			};
 		};
 
